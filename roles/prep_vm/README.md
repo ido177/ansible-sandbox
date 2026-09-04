@@ -1,6 +1,6 @@
 # Role: prep_vm
 
-Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`, `cpu`, `net`.
+Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`, `cpu`, `net`, `cpuinfo`.
 
 ## LUKS
 
@@ -172,3 +172,28 @@ test ! -e /etc/netplan/50-cloud-init.yaml && echo 'cloud-init netplan removed'
 ```
 
 `ip link show net0` must be UP, default route must be on `net0`, MTU must still be 9001 on this VM. The playbook log must contain the debug block with `name: net0`.
+
+## CPU list and Hyper-Threading / SMT
+
+At the **end** of the playbook the role prints the logical CPU list and whether Intel Hyper-Threading (or AMD multithreading) is supported and whether it is active.
+
+- Supported = `ht` flag in `/proc/cpuinfo` (capability). That flag does **not** mean SMT is on.
+- Active = `/sys/devices/system/cpu/smt/active` is `1`, or if that sysfs is missing (typical Xen/AWS), `processor_threads_per_core > 1`.
+
+On this VM expect one CPU (`cpu0`), `ht` present, SMT **not** active.
+
+```bash
+ansible-playbook playbooks/prep_vm/prep_vm.yaml --ask-vault-pass --tags cpuinfo
+```
+
+On a full run this task runs last (after net0 / reboot), so the log is at the end.
+
+### Validate
+
+The playbook log must list `cpu0` (and any other `cpuN`) and a supported/active pair. Cross-check:
+
+```bash
+ls -d /sys/devices/system/cpu/cpu[0-9]*
+grep -E 'vendor_id|model name|flags' /proc/cpuinfo | head
+cat /sys/devices/system/cpu/smt/active 2>/dev/null || echo 'smt sysfs not exposed'
+```

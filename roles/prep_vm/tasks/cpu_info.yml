@@ -1,0 +1,68 @@
+---
+- name: Discover logical CPUs
+  ansible.builtin.find:
+    paths: /sys/devices/system/cpu
+    patterns: "cpu[0-9]*"
+    file_type: directory
+    recurse: false
+  register: cpu_info_find
+  failed_when: false
+
+- name: List logical CPU names
+  ansible.builtin.set_fact:
+    cpu_info_list: "{{ (cpu_info_find.files | default([])) | map(attribute='path') | map('basename') | select('regex', '^cpu[0-9]+$') | list | sort }}"
+
+- name: Check whether SMT sysfs is present
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /sys/devices/system/cpu/smt/active
+    - /sys/devices/system/cpu/smt/control
+  register: cpu_smt_stat
+
+- name: Read SMT active flag
+  ansible.builtin.slurp:
+    src: /sys/devices/system/cpu/smt/active
+  register: cpu_smt_active_slurp
+  when: cpu_smt_stat.results[0].stat.exists | default(false)
+
+- name: Read SMT control flag
+  ansible.builtin.slurp:
+    src: /sys/devices/system/cpu/smt/control
+  register: cpu_smt_control_slurp
+  when: cpu_smt_stat.results[1].stat.exists | default(false)
+
+- name: Read /proc/cpuinfo
+  ansible.builtin.slurp:
+    src: /proc/cpuinfo
+  register: cpu_cpuinfo_slurp
+
+- name: Parse /proc/cpuinfo and topology
+  ansible.builtin.set_fact:
+    cpu_info_vendor: "{{ cpu_info_text | regex_search('vendor_id\\s*:\\s*(\\S+)', '\\1') | default('unknown', true) }}"
+    cpu_info_model: "{{ (cpu_info_text | regex_search('model name\\s*:\\s*(.+)', '\\1') | default('unknown', true)) | trim }}"
+    cpu_info_flags: "{{ (cpu_info_text | regex_search('flags\\s*:\\s*(.+)', '\\1') | default('', true)).split() }}"
+    cpu_info_threads: "{{ ansible_facts.processor_threads_per_core | default(1) | int }}"
+    cpu_info_smt_sysfs: "{{ cpu_smt_stat.results[0].stat.exists | default(false) | bool }}"
+    cpu_info_smt_control: "{{ (cpu_smt_control_slurp.content | b64decode | trim) if (cpu_smt_control_slurp.content is defined) else 'not exposed' }}"
+  vars:
+    cpu_info_text: "{{ cpu_cpuinfo_slurp.content | b64decode }}"
+
+- name: Interpret Hyper-Threading / SMT capability vs enablement
+  ansible.builtin.set_fact:
+    cpu_info_ht_supported: "{{ 'ht' in cpu_info_flags }}"
+    cpu_info_smt_active: "{{ ((cpu_smt_active_slurp.content | b64decode | trim) == '1') if (cpu_info_smt_sysfs | bool and cpu_smt_active_slurp.content is defined) else (cpu_info_threads | int > 1) }}"
+    cpu_info_feature: "{{ 'Hyper-Threading' if cpu_info_vendor == 'GenuineIntel' else ('multithreading (SMT)' if cpu_info_vendor == 'AuthenticAMD' else 'SMT') }}"
+
+- name: Display CPU list and Hyper-Threading / SMT information
+  ansible.builtin.debug:
+    msg:
+      - "CPUs: {{ cpu_info_list | join(', ') | default('none', true) }}"
+      - "model: {{ cpu_info_model }}"
+      - "vendor: {{ cpu_info_vendor }}"
+      - "sockets: {{ ansible_facts.processor_count | default('n/a') }}"
+      - "cores: {{ ansible_facts.processor_cores | default('n/a') }}"
+      - "threads_per_core: {{ cpu_info_threads }}"
+      - "logical: {{ ansible_facts.processor_vcpus | default(ansible_facts.processor_nproc) | default(cpu_info_list | length) }}"
+      - "{{ cpu_info_feature }} supported: {{ cpu_info_ht_supported | bool }} (cpuinfo flag 'ht' means capability, not that it is enabled)"
+      - "{{ cpu_info_feature }} active: {{ cpu_info_smt_active | bool }} (sysfs smt/active {{ 'present' if (cpu_info_smt_sysfs | bool) else 'not exposed' }}, smt/control={{ cpu_info_smt_control }}, threads_per_core={{ cpu_info_threads }})"

@@ -13,3 +13,7 @@
 - name: Rename the active NIC to net0
   ansible.builtin.import_tasks: net.yml
   tags: [net]
+
+- name: Display CPUs and Hyper-Threading / SMT
+  ansible.builtin.import_tasks: cpu_info.yml
+  tags: [cpuinfo]
