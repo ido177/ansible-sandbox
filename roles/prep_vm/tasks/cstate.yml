@@ -1,0 +1,61 @@
+---
+- name: Discover C-state disable files
+  ansible.builtin.find:
+    paths: /sys/devices/system/cpu
+    patterns: disable
+    file_type: file
+    recurse: true
+    depth: 4
+  register: cstate_disable_find
+  failed_when: false
+
+- name: Select C-state disable files excluding C0
+  ansible.builtin.set_fact:
+    cstate_disable_paths: "{{ (cstate_disable_find.files | default([])) | map(attribute='path') | select('regex', '/cpuidle/state[1-9][0-9]*/disable$') | list }}"
+
+- name: Skip runtime C-state disable when cpuidle is not exposed
+  ansible.builtin.debug:
+    msg: >-
+      No cpuidle sysfs C-states (state1+) on this host; runtime disable skipped
+      (common on Xen/AWS). Persistent kernel parameters are still applied.
+  when: cstate_disable_paths | length == 0
+
+- name: Read current C-state disable flags
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop: "{{ cstate_disable_paths }}"
+  register: cstate_slurp
+  when: cstate_disable_paths | length > 0
+
+- name: Disable available C-states
+  ansible.builtin.copy:
+    dest: "{{ item.item }}"
+    content: "1"
+    unsafe_writes: true
+  loop: "{{ cstate_slurp.results | default([]) }}"
+  when:
+    - item.content is defined
+    - (item.content | b64decode | trim) != "1"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Report disabled C-states
+  ansible.builtin.debug:
+    msg: "Disabled C-states: {{ cstate_disable_paths | join(', ') }}"
+  when: cstate_disable_paths | length > 0
+
+- name: Ensure GRUB drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/default/grub.d
+    state: directory
+    mode: "0755"
+
+- name: Persist C-state disable in a GRUB drop-in
+  ansible.builtin.copy:
+    dest: /etc/default/grub.d/99-cstate.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX intel_idle.max_cstate=0 processor.max_cstate=0"
+  notify: Update GRUB configuration

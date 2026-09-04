@@ -1,6 +1,6 @@
 # Role: prep_vm
 
-Prepares a server for operation. LUKS encryption lives in `tasks/luks.yml` and is imported from `tasks/main.yml` with the `luks` tag.
+Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`.
 
 ## LUKS
 
@@ -67,3 +67,39 @@ findmnt / /boot /boot/efi
 `/`, `/boot`, and `/boot/efi` must still be mounted on the same devices as before.
 
 Re-run the playbook with `--tags luks`: the LUKS task for `target_partition` must report `changed=false`.
+
+## C-state
+
+Disable idle C-states on every CPU that exposes them. Two layers:
+
+1. **Runtime** — write `1` to `/sys/devices/system/cpu/cpu*/cpuidle/stateN/disable` for `state1` and above (C0 is left alone). If cpuidle sysfs is missing (typical Xen/AWS guest), the task skips with a message and does not fail.
+2. **Persistent** — drop-in `/etc/default/grub.d/99-cstate.cfg` appends `intel_idle.max_cstate=0 processor.max_cstate=0` to `GRUB_CMDLINE_LINUX`, then `update-grub`. `/etc/default/grub` is not edited. The playbook does **not** reboot here; kernel parameters apply after a later reboot.
+
+```bash
+ansible-playbook playbooks/prep_vm/prep_vm.yaml --ask-vault-pass --tags cstate
+```
+
+### Validate
+
+If the hypervisor exposes cpuidle:
+
+```bash
+grep . /sys/devices/system/cpu/cpu*/cpuidle/state[1-9]*/disable
+```
+
+Each file should contain `1`.
+
+Persistent config (before or after reboot):
+
+```bash
+cat /etc/default/grub.d/99-cstate.cfg
+grep cstate /boot/grub/grub.cfg
+```
+
+After reboot:
+
+```bash
+grep -E 'intel_idle.max_cstate=0|processor.max_cstate=0' /proc/cmdline
+```
+
+On this AWS/Xen VM, runtime sysfs is likely absent; the skip message is expected. Check the drop-in and, after reboot, `/proc/cmdline`.

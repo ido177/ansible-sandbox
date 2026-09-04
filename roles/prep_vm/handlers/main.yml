@@ -1,0 +1,5 @@
+---
+- name: Update GRUB configuration
+  ansible.builtin.command: update-grub
+  when: ansible_os_family == "Debian"
+  changed_when: true

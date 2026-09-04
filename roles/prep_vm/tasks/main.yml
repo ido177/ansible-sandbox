@@ -1,3 +1,7 @@
 - name: Encrypt disks with LUKS
   ansible.builtin.import_tasks: luks.yml
   tags: [luks]
+
+- name: Disable C-states
+  ansible.builtin.import_tasks: cstate.yml
+  tags: [cstate]
