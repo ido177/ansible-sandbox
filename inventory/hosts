@@ -1,5 +1,5 @@
 [servers]
-3.76.25.130 target_disk=/dev/xvdf
+3.76.25.130 target_partition=/dev/xvdf1
 
 [servers:vars]
 ansible_user=ubuntu

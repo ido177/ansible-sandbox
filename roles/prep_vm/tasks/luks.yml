@@ -1,0 +1,306 @@
+---
+- name: Assert the inventory partition is set
+  ansible.builtin.assert:
+    that:
+      - target_partition is defined
+      - target_partition | length > 0
+    fail_msg: >-
+      Set target_partition to a partition path in inventory (for example /dev/xvdf1).
+    success_msg: "Using inventory partition {{ target_partition }}"
+
+- name: Assert the LUKS passphrase is set
+  ansible.builtin.assert:
+    that:
+      - luks_passphrase is defined
+      - luks_passphrase | length > 0
+    fail_msg: Set luks_passphrase in an Ansible Vault file (group_vars).
+    success_msg: LUKS passphrase is set.
+  no_log: true
+
+- name: Assert the inventory value is a partition path, not a whole disk
+  ansible.builtin.assert:
+    that:
+      - target_partition is match('^/dev/')
+      - target_partition is regex('^/dev/(xvd|sd|vd)[a-z]+[0-9]+$|^/dev/nvme[0-9]+n[0-9]+p[0-9]+$')
+      - (target_partition | basename) not in ansible_devices
+    fail_msg: >-
+      target_partition must be a partition (for example /dev/xvdf1 or /dev/nvme0n1p1),
+      not a whole disk. Got: {{ target_partition }}.
+    success_msg: "{{ target_partition }} looks like a partition."
+
+- name: Derive the parent disk and partition number from inventory
+  ansible.builtin.set_fact:
+    luks_second_parent: "{{ target_partition | regex_replace('^(/dev/(?:xvd|sd|vd)[a-z]+|/dev/nvme[0-9]+n[0-9]+)p?[0-9]+$', '\\1') }}"
+    luks_second_part_num: "{{ target_partition | regex_search('[0-9]+$') }}"
+
+- name: Assert the parent disk of the inventory partition exists
+  ansible.builtin.assert:
+    that:
+      - (luks_second_parent | basename) in ansible_devices
+    fail_msg: >-
+      Parent disk {{ luks_second_parent }} of {{ target_partition }} was not found
+      in ansible_devices.
+    success_msg: "{{ target_partition }} is on disk {{ luks_second_parent }}."
+
+- name: Assert the inventory partition is not mounted
+  ansible.builtin.assert:
+    that:
+      - target_partition not in (ansible_mounts | map(attribute='device') | list)
+      - (target_partition | basename) not in (ansible_mounts | map(attribute='device') | map('basename') | list)
+    fail_msg: >-
+      {{ target_partition }} is mounted. Refusing to encrypt a mounted filesystem.
+    success_msg: "{{ target_partition }} is not mounted."
+
+- name: Assert the second disk has no mounted partitions
+  ansible.builtin.assert:
+    that:
+      - (luks_second_disk_part_names | intersect(luks_mounted_basenames) | length) == 0
+    fail_msg: >-
+      {{ luks_second_parent }} has mounted partitions
+      {{ luks_second_disk_part_names | intersect(luks_mounted_basenames) | list }}.
+      This procedure encrypts a disk that does not hold the root filesystem.
+    success_msg: "{{ luks_second_parent }} has no mounted partitions."
+  vars:
+    luks_second_disk_part_names: "{{ (ansible_devices[luks_second_parent | basename].partitions | default({})) | list }}"
+    luks_mounted_basenames: "{{ ansible_mounts | map(attribute='device') | map('basename') | list }}"
+
+- name: Assert the root mount is visible
+  ansible.builtin.assert:
+    that:
+      - ansible_mounts | selectattr('mount', 'equalto', '/') | list | length > 0
+    fail_msg: Could not find a filesystem mounted at / in ansible_mounts.
+    success_msg: Found a filesystem mounted at /.
+
+- name: Capture the root mount
+  ansible.builtin.set_fact:
+    luks_root_mount: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | first }}"
+
+- name: Resolve root when the mount device is a regular disk partition
+  ansible.builtin.set_fact:
+    luks_root_partition: "{{ luks_root_mount.device }}"
+  when: luks_root_mount.device is regex('^/dev/(xvd|sd|vd)[a-z]+[0-9]+$|^/dev/nvme[0-9]+n[0-9]+p[0-9]+$')
+
+- name: Resolve root when mounted via a /dev/disk/by-* symlink
+  when:
+    - luks_root_partition is not defined
+    - luks_root_mount.device is match('^/dev/disk/by-')
+  block:
+    - name: Stat the root /dev/disk/by-* symlink
+      ansible.builtin.stat:
+        path: "{{ luks_root_mount.device }}"
+      register: luks_root_by_path_stat
+
+    - name: Set root partition from the /dev/disk/by-* symlink
+      ansible.builtin.set_fact:
+        luks_root_partition: "{{ luks_root_by_path_stat.stat.lnk_source if luks_root_by_path_stat.stat.lnk_source is match('^/dev/') else ('/dev/' ~ (luks_root_by_path_stat.stat.lnk_target | basename)) }}"
+      when:
+        - luks_root_by_path_stat.stat.exists | default(false)
+        - luks_root_by_path_stat.stat.islnk | default(false)
+
+- name: Resolve root from kernel PARTUUID
+  when:
+    - luks_root_partition is not defined
+    - ansible_cmdline.root | default('') is match('^PARTUUID=')
+  block:
+    - name: Stat the root PARTUUID symlink
+      ansible.builtin.stat:
+        path: "/dev/disk/by-partuuid/{{ ansible_cmdline.root | regex_replace('^PARTUUID=', '') }}"
+      register: luks_root_partuuid_stat
+
+    - name: Set root partition from the PARTUUID symlink
+      ansible.builtin.set_fact:
+        luks_root_partition: "{{ luks_root_partuuid_stat.stat.lnk_source if luks_root_partuuid_stat.stat.lnk_source is match('^/dev/') else ('/dev/' ~ (luks_root_partuuid_stat.stat.lnk_target | basename)) }}"
+      when:
+        - luks_root_partuuid_stat.stat.exists | default(false)
+        - luks_root_partuuid_stat.stat.islnk | default(false)
+
+- name: Resolve root from kernel UUID
+  when:
+    - luks_root_partition is not defined
+    - ansible_cmdline.root | default('') is match('^UUID=')
+  block:
+    - name: Stat the root UUID symlink
+      ansible.builtin.stat:
+        path: "/dev/disk/by-uuid/{{ ansible_cmdline.root | regex_replace('^UUID=', '') }}"
+      register: luks_root_uuid_stat
+
+    - name: Set root partition from the UUID symlink
+      ansible.builtin.set_fact:
+        luks_root_partition: "{{ luks_root_uuid_stat.stat.lnk_source if luks_root_uuid_stat.stat.lnk_source is match('^/dev/') else ('/dev/' ~ (luks_root_uuid_stat.stat.lnk_target | basename)) }}"
+      when:
+        - luks_root_uuid_stat.stat.exists | default(false)
+        - luks_root_uuid_stat.stat.islnk | default(false)
+
+- name: Record whether root resolved to a regular disk partition
+  ansible.builtin.set_fact:
+    luks_root_is_partition: "{{ luks_root_partition is defined and luks_root_partition is regex('^/dev/(xvd|sd|vd)[a-z]+[0-9]+$|^/dev/nvme[0-9]+n[0-9]+p[0-9]+$') }}"
+
+- name: Derive the parent disk of the root partition
+  ansible.builtin.set_fact:
+    luks_root_parent: "{{ luks_root_partition | regex_replace('^(/dev/(?:xvd|sd|vd)[a-z]+|/dev/nvme[0-9]+n[0-9]+)p?[0-9]+$', '\\1') }}"
+    luks_root_part_num: "{{ luks_root_partition | regex_search('[0-9]+$') }}"
+  when: luks_root_is_partition | bool
+
+- name: Assert the inventory partition is not on the root disk
+  ansible.builtin.assert:
+    that:
+      - luks_second_parent != luks_root_parent
+    fail_msg: >-
+      {{ target_partition }} is on {{ luks_second_parent }}, which also holds root
+      ({{ luks_root_partition }}). Neighbor encryption covers that disk; inventory
+      must point at a different disk.
+    success_msg: "{{ target_partition }} is on {{ luks_second_parent }}, not the root disk {{ luks_root_parent }}."
+  when: luks_root_is_partition | bool
+
+- name: Create a GPT partition on the second disk
+  community.general.parted:
+    device: "{{ luks_second_parent }}"
+    number: "{{ luks_second_part_num | int }}"
+    label: gpt
+    name: luks
+    state: present
+    part_start: "0%"
+    part_end: "100%"
+
+- name: Wait until the second-disk partition node exists
+  ansible.builtin.wait_for:
+    path: "{{ target_partition }}"
+    timeout: 30
+
+- name: Encrypt the second-disk partition with LUKS
+  block:
+    - name: Ensure a LUKS container exists on the inventory partition
+      community.crypto.luks_device:
+        device: "{{ target_partition }}"
+        state: present
+        type: luks2
+        passphrase: "{{ luks_passphrase }}"
+      no_log: true
+      register: luks_second_crypt
+
+    - name: Report LUKS status on the inventory partition
+      ansible.builtin.debug:
+        msg: >-
+          LUKS is present on {{ target_partition }}
+          (changed={{ luks_second_crypt is changed }}).
+  rescue:
+    - name: Fail with a clear message when second-disk LUKS fails
+      ansible.builtin.fail:
+        msg: >-
+          Failed to encrypt {{ target_partition }}. The partition must be empty
+          or already a LUKS container.
+
+- name: Skip neighbor LUKS when root is not a regular disk partition
+  ansible.builtin.debug:
+    msg: >-
+      Skipping encryption of a partition next to root: could not resolve /
+      ({{ luks_root_mount.device }}) to a regular disk partition
+      (cmdline root={{ ansible_cmdline.root | default('') }}).
+  when: not (luks_root_is_partition | bool)
+
+- name: Encrypt the partition next to root
+  when: luks_root_is_partition | bool
+  block:
+    - name: Read the partition table of the root disk
+      community.general.parted:
+        device: "{{ luks_root_parent }}"
+        state: info
+        unit: MiB
+      register: luks_root_disk_info
+
+    - name: Pick the closest partition next to root
+      ansible.builtin.set_fact:
+        luks_neighbor: "{{ luks_neighbor_json | from_json }}"
+      vars:
+        luks_neighbor_json: >-
+          {% set sorted_parts = luks_root_disk_info.partitions | default([]) | sort(attribute='begin') -%}
+          {% set ns = namespace(idx=-1, root_begin=0.0) -%}
+          {% for p in sorted_parts -%}
+          {%   if p.num | int == luks_root_part_num | int -%}
+          {%     set ns.idx = loop.index0 -%}
+          {%     set ns.root_begin = p.begin | float -%}
+          {%   endif -%}
+          {% endfor -%}
+          {% set adj = namespace(items=[]) -%}
+          {% if ns.idx > 0 -%}
+          {%   set adj.items = adj.items + [sorted_parts[ns.idx - 1]] -%}
+          {% endif -%}
+          {% if ns.idx >= 0 and ns.idx < (sorted_parts | length) - 1 -%}
+          {%   set adj.items = adj.items + [sorted_parts[ns.idx + 1]] -%}
+          {% endif -%}
+          {% set best = namespace(part=None, dist=None) -%}
+          {% for n in adj.items -%}
+          {%   set d = (n.begin | float - ns.root_begin) | abs -%}
+          {%   if best.dist is none or d < best.dist -%}
+          {%     set best.part = n -%}
+          {%     set best.dist = d -%}
+          {%   endif -%}
+          {% endfor -%}
+          {{ best.part | to_json if best.part is not none else '{}' }}
+
+    - name: Note when no partition is adjacent to root
+      ansible.builtin.set_fact:
+        luks_neighbor_device: ""
+        luks_neighbor_skip_reasons:
+          - "no partition adjacent to root {{ luks_root_partition }} on {{ luks_root_parent }}"
+        luks_neighbor_is_safe: false
+      when: luks_neighbor.num is not defined
+
+    - name: Build the adjacent partition device path
+      ansible.builtin.set_fact:
+        luks_neighbor_device: "{{ (luks_root_parent ~ 'p' ~ luks_neighbor.num) if (luks_root_parent is search('nvme')) else (luks_root_parent ~ luks_neighbor.num) }}"
+      when: luks_neighbor.num is defined
+
+    - name: Evaluate whether the adjacent partition is safe to encrypt
+      ansible.builtin.set_fact:
+        luks_neighbor_skip_reasons: "{{ _reasons }}"
+        luks_neighbor_is_safe: "{{ (_reasons | length) == 0 }}"
+      when: luks_neighbor.num is defined
+      vars:
+        _flag_list: "{{ luks_neighbor.flags | default([]) }}"
+        _unsafe: "{{ _flag_list | intersect(['boot', 'esp', 'bios_grub', 'legacy_boot']) }}"
+        _fstype: "{{ (luks_neighbor.fstype | default('')) | lower }}"
+        _size: "{{ luks_neighbor.size | default(0) | float }}"
+        _mounted_at: "{{ ((_mount_exact + _mount_basename) | map(attribute='mount') | list | unique | list) }}"
+        _mount_exact: "{{ ansible_mounts | selectattr('device', 'equalto', luks_neighbor_device) | list }}"
+        _mount_basename: "{{ ansible_mounts | selectattr('device', 'equalto', '/dev/' ~ (luks_neighbor_device | basename)) | list }}"
+        _reasons: "{{
+          (['GPT flags: ' ~ (_unsafe | join(', '))] if _unsafe else [])
+          + (['fstype is ' ~ _fstype] if _fstype in ['vfat', 'fat32', 'fat16', 'fat'] else [])
+          + (['size is ' ~ (_size | string) ~ ' MiB (minimum 100 MiB)'] if _size < 100 else [])
+          + (['mounted on ' ~ (_mounted_at | join(', '))] if _mounted_at else [])
+          + (['same as inventory partition'] if luks_neighbor_device == target_partition else [])
+          + (['this is the root partition'] if luks_neighbor_device == luks_root_partition else [])
+        }}"
+
+    - name: Skip neighbor LUKS when the adjacent partition is not a data partition
+      ansible.builtin.debug:
+        msg: >-
+          Skipping encryption of the partition next to {{ luks_root_partition }}:
+          {{ luks_neighbor_device | default('(none)') }}
+          ({{ luks_neighbor_skip_reasons | join('; ') }}).
+      when: not (luks_neighbor_is_safe | bool)
+
+    - name: Encrypt the adjacent partition with LUKS
+      when: luks_neighbor_is_safe | bool
+      block:
+        - name: Ensure a LUKS container exists on the adjacent partition
+          community.crypto.luks_device:
+            device: "{{ luks_neighbor_device }}"
+            state: present
+            type: luks2
+            passphrase: "{{ luks_passphrase }}"
+          no_log: true
+          register: luks_neighbor_crypt
+
+        - name: Report LUKS status on the adjacent partition
+          ansible.builtin.debug:
+            msg: >-
+              LUKS is present on {{ luks_neighbor_device }}
+              (changed={{ luks_neighbor_crypt is changed }}).
+      rescue:
+        - name: Fail with a clear message when neighbor LUKS fails
+          ansible.builtin.fail:
+            msg: >-
+              Failed to encrypt adjacent partition {{ luks_neighbor_device }}.
+              The partition must be empty or already a LUKS container.

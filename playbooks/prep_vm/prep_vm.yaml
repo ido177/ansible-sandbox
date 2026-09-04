@@ -1,0 +1,6 @@
+---
+- name: Prepare servers for operation
+  hosts: servers
+  become: true
+  roles:
+    - prep_vm
