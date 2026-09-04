@@ -1,0 +1,9 @@
+network:
+  version: 2
+  ethernets:
+    net0:
+      match:
+        macaddress: "{{ net_mac }}"
+      set-name: net0
+      dhcp4: true
+      mtu: {{ net_mtu }}

@@ -9,3 +9,7 @@
 - name: Switch CPU to performance mode
   ansible.builtin.import_tasks: cpu.yml
   tags: [cpu]
+
+- name: Rename the active NIC to net0
+  ansible.builtin.import_tasks: net.yml
+  tags: [net]

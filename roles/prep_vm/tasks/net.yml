@@ -1,0 +1,112 @@
+---
+- name: Assert a default IPv4 interface exists
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.default_ipv4 is defined
+      - ansible_facts.default_ipv4.interface is defined
+      - ansible_facts[ansible_facts.default_ipv4.interface] is defined
+      - ansible_facts[ansible_facts.default_ipv4.interface].macaddress is defined
+    fail_msg: >-
+      No default IPv4 interface in facts; cannot pick the active NIC to rename.
+    success_msg: >-
+      Active interface is {{ ansible_facts.default_ipv4.interface }}
+      ({{ ansible_facts[ansible_facts.default_ipv4.interface].macaddress }}).
+
+- name: Capture active interface identity
+  ansible.builtin.set_fact:
+    net_active_if: "{{ ansible_facts.default_ipv4.interface }}"
+    net_mac: "{{ ansible_facts[ansible_facts.default_ipv4.interface].macaddress }}"
+    net_mtu: "{{ ansible_facts[ansible_facts.default_ipv4.interface].mtu | default(1500) }}"
+
+- name: Ensure systemd-networkd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/network
+    state: directory
+    mode: "0755"
+
+- name: Name the active NIC net0 via a systemd .link file
+  ansible.builtin.copy:
+    dest: /etc/systemd/network/10-net0.link
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Match]
+      MACAddress={{ net_mac }}
+
+      [Link]
+      Name=net0
+  register: net_link
+
+- name: Ensure cloud-init drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/cloud/cloud.cfg.d
+    state: directory
+    mode: "0755"
+
+- name: Stop cloud-init from regenerating netplan on boot
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      network: {config: disabled}
+  register: net_cloud
+
+- name: Install netplan config for net0
+  ansible.builtin.template:
+    src: 99-net0.yaml.j2
+    dest: /etc/netplan/99-net0.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  register: net_plan
+
+- name: Remove cloud-init netplan so it does not keep the old name
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
+  register: net_old_plan
+
+- name: Decide whether a reboot is required to rename the NIC
+  ansible.builtin.set_fact:
+    net_needs_reboot: "{{ (net_active_if != 'net0') or (net_link is changed) or (net_cloud is changed) or (net_plan is changed) or (net_old_plan is changed) }}"
+
+- name: Report whether the host will reboot for net0
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Reboot required to apply net0 (current iface ' ~ net_active_if ~ ').'
+         if (net_needs_reboot | bool)
+         else 'Interface already net0 and network configs are unchanged; skipping reboot.' }}
+
+- name: Apply pending handlers before a possible reboot
+  ansible.builtin.meta: flush_handlers
+
+- name: Reboot to apply the interface name net0
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+    msg: Rebooting to rename the active NIC to net0
+  when: net_needs_reboot | bool
+
+- name: Refresh facts after rename
+  ansible.builtin.setup:
+
+- name: Assert net0 is present and up
+  ansible.builtin.assert:
+    that:
+      - "'net0' in ansible_facts.interfaces"
+      - ansible_facts.net0.active | default(false)
+    fail_msg: Interface net0 is missing or down after the rename.
+    success_msg: Interface net0 is present and up.
+
+- name: Display the renamed interface
+  ansible.builtin.debug:
+    msg:
+      - "name: net0"
+      - "mac: {{ ansible_facts.net0.macaddress | default('n/a') }}"
+      - "mtu: {{ ansible_facts.net0.mtu | default('n/a') }}"
+      - "active: {{ ansible_facts.net0.active | default(false) }}"
+      - "ipv4: {{ ansible_facts.net0.ipv4.address | default('n/a') }}"
+      - "ipv6: {{ (ansible_facts.net0.ipv6 | default([]) | map(attribute='address') | list) | join(', ') | default('n/a', true) }}"
+      - "default_ipv4: {{ ansible_facts.default_ipv4.address | default('n/a') }} via {{ ansible_facts.default_ipv4.interface | default('n/a') }}"

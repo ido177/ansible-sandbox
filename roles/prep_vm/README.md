@@ -1,6 +1,6 @@
 # Role: prep_vm
 
-Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`, `cpu`.
+Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`, `cpu`, `net`.
 
 ## LUKS
 
@@ -142,3 +142,33 @@ grep -E 'cpufreq.default_governor=performance|intel_pstate=performance' /proc/cm
 ```
 
 On this AWS/Xen VM, runtime sysfs is likely absent; the skip message is expected. Check the drop-in and, after reboot, `/proc/cmdline`.
+
+## Network: rename to net0
+
+Rename the **active** NIC (the one with the default IPv4 route; on this VM `enX0`) to `net0`. The current name is taken from facts, not hardcoded.
+
+Do not rename the interface live (`ip link` would drop SSH). The role writes persistent config and reboots:
+
+1. `/etc/systemd/network/10-net0.link` — match by MAC, `Name=net0`.
+2. `/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg` — stop cloud-init from recreating `enX0`.
+3. `/etc/netplan/99-net0.yaml` — DHCP + the current MTU (9001 on this VM). `/etc/netplan/50-cloud-init.yaml` is removed so it cannot keep the old name.
+4. Pending handlers (`update-grub`) are flushed, then `reboot` if the iface is not already `net0` or any of those files changed.
+5. Facts are refreshed and the playbook **prints** net0 MAC, IPv4/IPv6, MTU, state, and the default route.
+
+```bash
+ansible-playbook playbooks/prep_vm/prep_vm.yaml --ask-vault-pass --tags net
+```
+
+This tag **reboots** the host unless it is already using `net0` with configs in place.
+
+### Validate
+
+```bash
+ip link show net0
+ip -4 addr show net0
+ip route show default
+ls /etc/systemd/network/10-net0.link /etc/netplan/99-net0.yaml
+test ! -e /etc/netplan/50-cloud-init.yaml && echo 'cloud-init netplan removed'
+```
+
+`ip link show net0` must be UP, default route must be on `net0`, MTU must still be 9001 on this VM. The playbook log must contain the debug block with `name: net0`.
