@@ -1,6 +1,6 @@
 # Role: prep_vm
 
-Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`, `cpu`, `net`, `cpuinfo`.
+Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `preflight` (`always`), `luks`, `cstate`, `cpu`, `net`, `cpuinfo`.
 
 ## LUKS
 
@@ -16,7 +16,7 @@ Both procedures are idempotent: a second run leaves an existing LUKS container u
 | Variable | Where | Meaning |
 | --- | --- | --- |
 | `target_partition` | inventory host var | Partition to encrypt on the **non-root** disk, e.g. `/dev/xvdf1` or `/dev/nvme0n1p1`. Must be a partition, not a whole disk. |
-| `luks_passphrase` | `inventory/group_vars/all/vault.yaml` (Vault) | Passphrase for both LUKS containers. |
+| `luks_passphrase` | `../../inventory/dev/group_vars/all/vault.yaml` (Vault) | Passphrase for both LUKS containers. |
 
 ### Requirements
 

@@ -1,0 +1,13 @@
+---
+- name: Assert the host is Debian or Ubuntu
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+      - ansible_distribution in ["Ubuntu", "Debian"]
+    fail_msg: >-
+      This role supports Debian and Ubuntu (netplan, /etc/default/grub.d, update-grub).
+      Got {{ ansible_distribution | default('unknown') }}
+      {{ ansible_distribution_version | default('') }}
+      (os_family={{ ansible_os_family | default('unknown') }}).
+    success_msg: >-
+      OS check passed: {{ ansible_distribution }} {{ ansible_distribution_version }}.

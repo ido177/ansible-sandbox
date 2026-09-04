@@ -1,3 +1,7 @@
+- name: Check that the OS is Debian or Ubuntu
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [preflight, always]
+
 - name: Encrypt disks with LUKS
   ansible.builtin.import_tasks: luks.yml
   tags: [luks]
