@@ -1,0 +1,92 @@
+---
+- name: Discover scaling_governor files
+  ansible.builtin.find:
+    paths: /sys/devices/system/cpu
+    patterns: scaling_governor
+    file_type: file
+    recurse: true
+    depth: 4
+  register: cpu_governor_find
+  failed_when: false
+
+- name: Select per-CPU scaling_governor files
+  ansible.builtin.set_fact:
+    cpu_governor_paths: "{{ (cpu_governor_find.files | default([])) | map(attribute='path') | select('regex', '/cpu[0-9]+/cpufreq/scaling_governor$') | list }}"
+
+- name: Skip runtime governor change when cpufreq is not exposed
+  ansible.builtin.debug:
+    msg: >-
+      No cpufreq scaling_governor sysfs on this host; runtime switch to performance
+      skipped (common on Xen/AWS). Persistent kernel parameters are still applied.
+  when: cpu_governor_paths | length == 0
+
+- name: Read current scaling governors
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop: "{{ cpu_governor_paths }}"
+  register: cpu_governor_slurp
+  when: cpu_governor_paths | length > 0
+
+- name: Read available governors
+  ansible.builtin.slurp:
+    src: "{{ item | dirname }}/scaling_available_governors"
+  loop: "{{ cpu_governor_paths }}"
+  register: cpu_available_slurp
+  failed_when: false
+  when: cpu_governor_paths | length > 0
+
+- name: Skip CPUs where the performance governor is not available
+  ansible.builtin.debug:
+    msg: >-
+      Skipping {{ item }}: performance is not in available governors
+      ({{ (cpu_available_slurp.results[cpu_gov_idx].content | b64decode | trim)
+         if (cpu_available_slurp.results[cpu_gov_idx].content is defined)
+         else 'unavailable' }}).
+  loop: "{{ cpu_governor_paths }}"
+  loop_control:
+    index_var: cpu_gov_idx
+  when:
+    - cpu_governor_paths | length > 0
+    - >-
+      cpu_available_slurp.results[cpu_gov_idx] is defined
+      and (
+        cpu_available_slurp.results[cpu_gov_idx].content is not defined
+        or ('performance' not in (cpu_available_slurp.results[cpu_gov_idx].content | b64decode | split))
+      )
+
+- name: Switch CPUs to the performance governor
+  ansible.builtin.copy:
+    dest: "{{ item }}"
+    content: performance
+    unsafe_writes: true
+  loop: "{{ cpu_governor_paths }}"
+  loop_control:
+    index_var: cpu_gov_idx
+  when:
+    - cpu_governor_paths | length > 0
+    - >-
+      cpu_governor_slurp.results[cpu_gov_idx].content is defined
+      and (cpu_governor_slurp.results[cpu_gov_idx].content | b64decode | trim) != "performance"
+      and cpu_available_slurp.results[cpu_gov_idx].content is defined
+      and ('performance' in (cpu_available_slurp.results[cpu_gov_idx].content | b64decode | split))
+
+- name: Report scaling governors targeted
+  ansible.builtin.debug:
+    msg: "cpufreq scaling_governor paths: {{ cpu_governor_paths | join(', ') }}"
+  when: cpu_governor_paths | length > 0
+
+- name: Ensure GRUB drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/default/grub.d
+    state: directory
+    mode: "0755"
+
+- name: Persist performance governor in a GRUB drop-in
+  ansible.builtin.copy:
+    dest: /etc/default/grub.d/99-cpufreq.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX cpufreq.default_governor=performance intel_pstate=performance"
+  notify: Update GRUB configuration

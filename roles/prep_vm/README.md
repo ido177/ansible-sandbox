@@ -1,6 +1,6 @@
 # Role: prep_vm
 
-Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`.
+Prepares a server for operation. Task files are imported from `tasks/main.yml` with tags: `luks`, `cstate`, `cpu`.
 
 ## LUKS
 
@@ -100,6 +100,45 @@ After reboot:
 
 ```bash
 grep -E 'intel_idle.max_cstate=0|processor.max_cstate=0' /proc/cmdline
+```
+
+On this AWS/Xen VM, runtime sysfs is likely absent; the skip message is expected. Check the drop-in and, after reboot, `/proc/cmdline`.
+
+## CPU governor
+
+Switch CPUs from a power-saving governor to `performance`. Two layers:
+
+1. **Runtime** — write `performance` to each `/sys/devices/system/cpu/cpuN/cpufreq/scaling_governor` if that governor is listed in `scaling_available_governors`. If cpufreq sysfs is missing (typical Xen/AWS guest), the task skips with a message and does not fail.
+2. **Persistent** — drop-in `/etc/default/grub.d/99-cpufreq.cfg` appends `cpufreq.default_governor=performance intel_pstate=performance` to `GRUB_CMDLINE_LINUX`, then `update-grub`. Separate from `99-cstate.cfg` (both append; neither overwrites the other or the cloud-init 40/50 files). The playbook does **not** reboot here.
+
+```bash
+ansible-playbook playbooks/prep_vm/prep_vm.yaml --ask-vault-pass --tags cpu
+```
+
+### Validate
+
+If the hypervisor exposes cpufreq:
+
+```bash
+grep . /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+```
+
+Each file should contain `performance`.
+
+Persistent config (before or after reboot):
+
+```bash
+cat /etc/default/grub.d/99-cpufreq.cfg
+ls /etc/default/grub.d/
+grep default_governor /boot/grub/grub.cfg
+```
+
+`ls` should still show `40-force-partuuid.cfg`, `50-cloudimg-settings.cfg`, plus our `99-cstate.cfg` and `99-cpufreq.cfg`.
+
+After reboot:
+
+```bash
+grep -E 'cpufreq.default_governor=performance|intel_pstate=performance' /proc/cmdline
 ```
 
 On this AWS/Xen VM, runtime sysfs is likely absent; the skip message is expected. Check the drop-in and, after reboot, `/proc/cmdline`.

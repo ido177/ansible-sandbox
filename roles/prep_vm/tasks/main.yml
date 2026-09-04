@@ -5,3 +5,7 @@
 - name: Disable C-states
   ansible.builtin.import_tasks: cstate.yml
   tags: [cstate]
+
+- name: Switch CPU to performance mode
+  ansible.builtin.import_tasks: cpu.yml
+  tags: [cpu]
