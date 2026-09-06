@@ -1,0 +1,386 @@
+2026-09-06 13:31:33,760 p=60320 u=k.romanikhin n=ansible INFO| PLAY [Prepare servers for operation] **********************************************************************************************************************************************************************************************************************
+2026-09-06 13:31:33,773 p=60320 u=k.romanikhin n=ansible INFO| TASK [Gathering Facts] ************************************************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,308 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:38,312 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the host is Debian or Ubuntu] ******************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,334 p=60320 u=k.romanikhin n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-09-06 13:31:38,334 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/preflight.yml:7:15
+
+5       - ansible_os_family == "Debian"
+6       - ansible_distribution in ["Ubuntu", "Debian"]
+7     fail_msg: >-
+                ^ column 15
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,335 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/preflight.yml:12:18
+
+10       {{ ansible_distribution_version | default('') }}
+11       (os_family={{ ansible_os_family | default('unknown') }}).
+12     success_msg: >-
+                    ^ column 18
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,335 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/preflight.yml:5:9
+
+3   ansible.builtin.assert:
+4     that:
+5       - ansible_os_family == "Debian"
+          ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,335 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/preflight.yml:6:9
+
+4     that:
+5       - ansible_os_family == "Debian"
+6       - ansible_distribution in ["Ubuntu", "Debian"]
+          ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,335 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "OS check passed: Ubuntu 24.04."
+}
+2026-09-06 13:31:38,337 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the inventory partition is set] ****************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,354 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "Using inventory partition /dev/xvdf1"
+}
+2026-09-06 13:31:38,356 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the LUKS passphrase is set] ********************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,380 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:38,383 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the inventory value is a partition path, not a whole disk] *************************************************************************************************************************************************************************
+2026-09-06 13:31:38,396 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:25:9
+
+23       - target_partition is match('^/dev/')
+24       - target_partition is regex('^/dev/(xvd|sd|vd)[a-z]+[0-9]+$|^/dev/nvme[0-9]+n[0-9]+p[0-9]+$')
+25       - (target_partition | basename) not in ansible_devices
+           ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,396 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "/dev/xvdf1 looks like a partition."
+}
+2026-09-06 13:31:38,398 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Derive the parent disk and partition number from inventory] *******************************************************************************************************************************************************************************
+2026-09-06 13:31:38,409 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:38,411 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the parent disk of the inventory partition exists] *********************************************************************************************************************************************************************************
+2026-09-06 13:31:38,422 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:39:9
+
+37   ansible.builtin.assert:
+38     that:
+39       - (luks_second_parent | basename) in ansible_devices
+           ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,423 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "/dev/xvdf1 is on disk /dev/xvdf."
+}
+2026-09-06 13:31:38,424 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the inventory partition is not mounted] ********************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,437 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:48:9
+
+46   ansible.builtin.assert:
+47     that:
+48       - target_partition not in (ansible_mounts | map(attribute='device') | list)
+           ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,438 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:49:9
+
+47     that:
+48       - target_partition not in (ansible_mounts | map(attribute='device') | list)
+49       - (target_partition | basename) not in (ansible_mounts | map(attribute='device') | map('basename') | list)
+           ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,438 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "/dev/xvdf1 is not mounted."
+}
+2026-09-06 13:31:38,439 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the second disk has no mounted partitions] *****************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,455 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:64:34
+
+62     success_msg: "{{ luks_second_parent }} has no mounted partitions."
+63   vars:
+64     luks_second_disk_part_names: "{{ (ansible_devices[luks_second_parent | basename].partitions | default({})) | l...
+                                    ^ column 34
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,455 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "/dev/xvdf has no mounted partitions."
+}
+2026-09-06 13:31:38,456 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the root mount is visible] *********************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,471 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:70:9
+
+68   ansible.builtin.assert:
+69     that:
+70       - ansible_mounts | selectattr('mount', 'equalto', '/') | list | length > 0
+           ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,471 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "Found a filesystem mounted at /."
+}
+2026-09-06 13:31:38,472 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Capture the root mount] *******************************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,484 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:76:22
+
+74 - name: Capture the root mount
+75   ansible.builtin.set_fact:
+76     luks_root_mount: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | first }}"
+                        ^ column 22
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:38,485 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:38,486 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Resolve root when the mount device is a regular disk partition] ***************************************************************************************************************************************************************************
+2026-09-06 13:31:38,495 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:38,496 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Stat the root /dev/disk/by-* symlink] *****************************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,504 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:38,505 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Set root partition from the /dev/disk/by-* symlink] ***************************************************************************************************************************************************************************************
+2026-09-06 13:31:38,513 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:38,515 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Stat the root PARTUUID symlink] ***********************************************************************************************************************************************************************************************************
+2026-09-06 13:31:40,851 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:103:7
+
+101   when:
+102     - luks_root_partition is not defined
+103     - ansible_cmdline.root | default('') is match('^PARTUUID=')
+          ^ column 7
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:40,851 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:107:15
+
+105     - name: Stat the root PARTUUID symlink
+106       ansible.builtin.stat:
+107         path: "/dev/disk/by-partuuid/{{ ansible_cmdline.root | regex_replace('^PARTUUID=', '') }}"
+                  ^ column 15
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:40,852 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:40,856 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Set root partition from the PARTUUID symlink] *********************************************************************************************************************************************************************************************
+2026-09-06 13:31:40,879 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:40,881 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Stat the root UUID symlink] ***************************************************************************************************************************************************************************************************************
+2026-09-06 13:31:40,891 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:40,893 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Set root partition from the UUID symlink] *************************************************************************************************************************************************************************************************
+2026-09-06 13:31:40,901 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:40,903 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Record whether root resolved to a regular disk partition] *********************************************************************************************************************************************************************************
+2026-09-06 13:31:40,914 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:40,916 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Derive the parent disk of the root partition] *********************************************************************************************************************************************************************************************
+2026-09-06 13:31:40,928 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:40,930 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert the inventory partition is not on the root disk] ***********************************************************************************************************************************************************************************
+2026-09-06 13:31:40,942 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "/dev/xvdf1 is on /dev/xvdf, not the root disk /dev/xvda."
+}
+2026-09-06 13:31:40,944 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Create a GPT partition on the second disk] ************************************************************************************************************************************************************************************************
+2026-09-06 13:31:43,616 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:31:43,620 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Wait until the second-disk partition node exists] *****************************************************************************************************************************************************************************************
+2026-09-06 13:31:45,958 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:45,963 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Ensure a LUKS container exists on the inventory partition] ********************************************************************************************************************************************************************************
+2026-09-06 13:31:53,691 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:31:53,698 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Report LUKS status on the inventory partition] ********************************************************************************************************************************************************************************************
+2026-09-06 13:31:53,718 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "msg": "LUKS is present on /dev/xvdf1 (changed=True)."
+}
+2026-09-06 13:31:53,720 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Skip neighbor LUKS when root is not a regular disk partition] *****************************************************************************************************************************************************************************
+2026-09-06 13:31:53,731 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:53,733 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read the partition table of the root disk] ************************************************************************************************************************************************************************************************
+2026-09-06 13:31:56,202 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:56,208 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Pick the closest partition next to root] **************************************************************************************************************************************************************************************************
+2026-09-06 13:31:56,237 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:56,239 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Note when no partition is adjacent to root] ***********************************************************************************************************************************************************************************************
+2026-09-06 13:31:56,251 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:56,253 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Build the adjacent partition device path] *************************************************************************************************************************************************************************************************
+2026-09-06 13:31:56,268 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:56,269 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Evaluate whether the adjacent partition is safe to encrypt] *******************************************************************************************************************************************************************************
+2026-09-06 13:31:56,293 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/tasks/luks.yml:265:23
+
+263         _size: "{{ luks_neighbor.size | default(0) | float }}"
+264         _mounted_at: "{{ ((_mount_exact + _mount_basename) | map(attribute='mount') | list | unique | list) }}"
+265         _mount_exact: "{{ ansible_mounts | selectattr('device', 'equalto', luks_neighbor_device) | list }}"
+                          ^ column 23
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:31:56,294 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:56,295 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Skip neighbor LUKS when the adjacent partition is not a data partition] *******************************************************************************************************************************************************************
+2026-09-06 13:31:56,307 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "msg": "Skipping encryption of the partition next to /dev/xvda1: /dev/xvda16 (mounted on /boot)."
+}
+2026-09-06 13:31:56,309 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Ensure a LUKS container exists on the adjacent partition] *********************************************************************************************************************************************************************************
+2026-09-06 13:31:56,318 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:56,320 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Report LUKS status on the adjacent partition] *********************************************************************************************************************************************************************************************
+2026-09-06 13:31:56,328 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:56,330 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Discover C-state disable files] ***********************************************************************************************************************************************************************************************************
+2026-09-06 13:31:58,617 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:58,622 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Select C-state disable files excluding C0] ************************************************************************************************************************************************************************************************
+2026-09-06 13:31:58,647 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:31:58,650 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Skip runtime C-state disable when cpuidle is not exposed] *********************************************************************************************************************************************************************************
+2026-09-06 13:31:58,668 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "msg": "No cpuidle sysfs C-states (state1+) on this host; runtime disable skipped (common on Xen/AWS). Persistent kernel parameters are still applied."
+}
+2026-09-06 13:31:58,670 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read current C-state disable flags] *******************************************************************************************************************************************************************************************************
+2026-09-06 13:31:58,678 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:58,682 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Disable available C-states] ***************************************************************************************************************************************************************************************************************
+2026-09-06 13:31:58,692 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:58,694 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Report disabled C-states] *****************************************************************************************************************************************************************************************************************
+2026-09-06 13:31:58,704 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:31:58,707 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Ensure GRUB drop-in directory exists] *****************************************************************************************************************************************************************************************************
+2026-09-06 13:32:01,029 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:01,034 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Persist C-state disable in a GRUB drop-in] ************************************************************************************************************************************************************************************************
+2026-09-06 13:32:06,068 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:06,073 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Discover scaling_governor files] **********************************************************************************************************************************************************************************************************
+2026-09-06 13:32:08,328 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:08,333 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Select per-CPU scaling_governor files] ****************************************************************************************************************************************************************************************************
+2026-09-06 13:32:08,354 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:08,357 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Skip runtime governor change when cpufreq is not exposed] *********************************************************************************************************************************************************************************
+2026-09-06 13:32:08,372 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "msg": "No cpufreq scaling_governor sysfs on this host; runtime switch to performance skipped (common on Xen/AWS). Persistent kernel parameters are still applied."
+}
+2026-09-06 13:32:08,374 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read current scaling governors] ***********************************************************************************************************************************************************************************************************
+2026-09-06 13:32:08,381 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:32:08,383 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read available governors] *****************************************************************************************************************************************************************************************************************
+2026-09-06 13:32:08,390 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:32:08,392 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Skip CPUs where the performance governor is not available] ********************************************************************************************************************************************************************************
+2026-09-06 13:32:08,398 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:32:08,400 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Switch CPUs to the performance governor] **************************************************************************************************************************************************************************************************
+2026-09-06 13:32:08,405 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:32:08,407 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Report scaling governors targeted] ********************************************************************************************************************************************************************************************************
+2026-09-06 13:32:08,417 p=60320 u=k.romanikhin n=ansible INFO| skipping: [3.76.25.130]
+2026-09-06 13:32:08,418 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Ensure GRUB drop-in directory exists] *****************************************************************************************************************************************************************************************************
+2026-09-06 13:32:10,648 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:10,653 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Persist performance governor in a GRUB drop-in] *******************************************************************************************************************************************************************************************
+2026-09-06 13:32:15,606 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:15,610 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert a default IPv4 interface exists] ***************************************************************************************************************************************************************************************************
+2026-09-06 13:32:15,626 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "Active interface is enX0 (02:de:9b:a6:45:5b)."
+}
+2026-09-06 13:32:15,628 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Capture active interface identity] ********************************************************************************************************************************************************************************************************
+2026-09-06 13:32:15,642 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:15,645 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Ensure systemd-networkd drop-in directory exists] *****************************************************************************************************************************************************************************************
+2026-09-06 13:32:17,921 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:17,927 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Name the active NIC net0 via a systemd .link file] ****************************************************************************************************************************************************************************************
+2026-09-06 13:32:22,951 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:22,956 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Ensure cloud-init drop-in directory exists] ***********************************************************************************************************************************************************************************************
+2026-09-06 13:32:25,213 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:25,218 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Stop cloud-init from regenerating netplan on boot] ****************************************************************************************************************************************************************************************
+2026-09-06 13:32:30,260 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:30,266 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Install netplan config for net0] **********************************************************************************************************************************************************************************************************
+2026-09-06 13:32:35,327 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:35,332 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Remove cloud-init netplan so it does not keep the old name] *******************************************************************************************************************************************************************************
+2026-09-06 13:32:37,573 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:37,579 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Decide whether a reboot is required to rename the NIC] ************************************************************************************************************************************************************************************
+2026-09-06 13:32:37,599 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:32:37,601 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Report whether the host will reboot for net0] *********************************************************************************************************************************************************************************************
+2026-09-06 13:32:37,615 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "msg": "Reboot required to apply net0 (current iface enX0)."
+}
+2026-09-06 13:32:37,617 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Apply pending handlers before a possible reboot] ******************************************************************************************************************************************************************************************
+2026-09-06 13:32:37,620 p=60320 u=k.romanikhin n=ansible INFO| RUNNING HANDLER [prep_vm : Update GRUB configuration] *****************************************************************************************************************************************************************************************************
+2026-09-06 13:32:40,894 p=60320 u=k.romanikhin n=ansible INFO| [DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /Users/k.romanikhin/PycharmProjects/ansible-sandbox2/roles/prep_vm/handlers/main.yml:4:9
+
+2 - name: Update GRUB configuration
+3   ansible.builtin.command: update-grub
+4   when: ansible_os_family == "Debian"
+          ^ column 9
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+
+2026-09-06 13:32:40,894 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:32:40,900 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Reboot to apply the interface name net0] **************************************************************************************************************************************************************************************************
+2026-09-06 13:33:18,174 p=60320 u=k.romanikhin n=ansible INFO| changed: [3.76.25.130]
+2026-09-06 13:33:18,194 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Refresh facts after rename] ***************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:22,465 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:22,468 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Assert net0 is present and up] ************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:22,485 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "changed": false,
+    "msg": "Interface net0 is present and up."
+}
+2026-09-06 13:33:22,487 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Display the renamed interface] ************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:22,504 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+    "msg": [
+        "name: net0",
+        "mac: 02:de:9b:a6:45:5b",
+        "mtu: 9001",
+        "active: True",
+        "ipv4: 172.30.33.238",
+        "ipv6: fe80::de:9bff:fea6:455b",
+        "default_ipv4: 172.30.33.238 via net0"
+    ]
+}
+2026-09-06 13:33:22,506 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Discover logical CPUs] ********************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:24,925 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:24,932 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : List logical CPU names] *******************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:24,956 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:24,959 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Check whether SMT sysfs is present] *******************************************************************************************************************************************************************************************************
+2026-09-06 13:33:27,662 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => (item=/sys/devices/system/cpu/smt/active)
+2026-09-06 13:33:30,400 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => (item=/sys/devices/system/cpu/smt/control)
+2026-09-06 13:33:30,407 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read SMT active flag] *********************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:32,854 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:32,859 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read SMT control flag] ********************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:35,239 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:35,245 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Read /proc/cpuinfo] ***********************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:37,632 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:37,637 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Parse /proc/cpuinfo and topology] *********************************************************************************************************************************************************************************************************
+2026-09-06 13:33:37,680 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:37,685 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Interpret Hyper-Threading / SMT capability vs enablement] *********************************************************************************************************************************************************************************
+2026-09-06 13:33:37,730 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130]
+2026-09-06 13:33:37,735 p=60320 u=k.romanikhin n=ansible INFO| TASK [prep_vm : Display CPU list and Hyper-Threading / SMT information] ***********************************************************************************************************************************************************************************
+2026-09-06 13:33:37,750 p=60320 u=k.romanikhin n=ansible INFO| ok: [3.76.25.130] => {
+2026-09-06 13:33:37,751 p=60320 u=k.romanikhin n=ansible INFO|     "msg": [
+2026-09-06 13:33:37,751 p=60320 u=k.romanikhin n=ansible INFO|         "CPUs: cpu0",
+2026-09-06 13:33:37,752 p=60320 u=k.romanikhin n=ansible INFO|         "model: Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz",
+2026-09-06 13:33:37,752 p=60320 u=k.romanikhin n=ansible INFO|         "vendor: GenuineIntel",
+2026-09-06 13:33:37,752 p=60320 u=k.romanikhin n=ansible INFO|         "sockets: 1",
+2026-09-06 13:33:37,753 p=60320 u=k.romanikhin n=ansible INFO|         "cores: 1",
+2026-09-06 13:33:37,753 p=60320 u=k.romanikhin n=ansible INFO|         "threads_per_core: 1",
+2026-09-06 13:33:37,753 p=60320 u=k.romanikhin n=ansible INFO|         "logical: 1",
+2026-09-06 13:33:37,754 p=60320 u=k.romanikhin n=ansible INFO|         "Hyper-Threading supported: True (cpuinfo flag 'ht' means capability, not that it is enabled)",
+2026-09-06 13:33:37,754 p=60320 u=k.romanikhin n=ansible INFO|         "Hyper-Threading active: False (sysfs smt/active present, smt/control=notsupported, threads_per_core=1)"
+2026-09-06 13:33:37,754 p=60320 u=k.romanikhin n=ansible INFO|     ]
+2026-09-06 13:33:37,755 p=60320 u=k.romanikhin n=ansible INFO| }
+2026-09-06 13:33:37,760 p=60320 u=k.romanikhin n=ansible INFO| PLAY RECAP ************************************************************************************************************************************************************************************************************************************************
+2026-09-06 13:33:37,761 p=60320 u=k.romanikhin n=ansible INFO| 3.76.25.130                : ok=59   changed=10   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
