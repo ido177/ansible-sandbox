@@ -39,9 +39,9 @@
 
 - name: Parse /proc/cpuinfo and topology
   ansible.builtin.set_fact:
-    cpu_info_vendor: "{{ cpu_info_text | regex_search('vendor_id\\s*:\\s*(\\S+)', '\\1') | default('unknown', true) }}"
-    cpu_info_model: "{{ (cpu_info_text | regex_search('model name\\s*:\\s*(.+)', '\\1') | default('unknown', true)) | trim }}"
-    cpu_info_flags: "{{ (cpu_info_text | regex_search('flags\\s*:\\s*(.+)', '\\1') | default('', true)).split() }}"
+    cpu_info_vendor: "{{ (cpu_info_text | regex_search('vendor_id\\s*:\\s*(\\S+)', '\\1') | default(['unknown'], true)) | first }}"
+    cpu_info_model: "{{ (cpu_info_text | regex_search('model name\\s*:\\s*(.+)', '\\1') | default(['unknown'], true)) | first | trim }}"
+    cpu_info_flags: "{{ (cpu_info_text | regex_search('flags\\s*:\\s*(.+)', '\\1') | default([''], true) | first).split() }}"
     cpu_info_threads: "{{ ansible_facts.processor_threads_per_core | default(1) | int }}"
     cpu_info_smt_sysfs: "{{ cpu_smt_stat.results[0].stat.exists | default(false) | bool }}"
     cpu_info_smt_control: "{{ (cpu_smt_control_slurp.content | b64decode | trim) if (cpu_smt_control_slurp.content is defined) else 'not exposed' }}"
